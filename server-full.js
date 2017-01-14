@@ -55,7 +55,7 @@ function dbConnect() {
 
 	return new Promise((resolve, reject) => {
 		// Connection URL
-		var url = 'mongodb://localhost:27017/seed';
+		var url = 'mongodb://localhost:27017/swab';
 		// Use connect method to connect to the Server
 		mongodb.MongoClient.connect(url, function (err, db) {
 			if (err) {
@@ -97,14 +97,7 @@ app.get('/data/:objType/:id', function (req, res) {
 	dbConnect()
 		.then((db) => {
 			const collection = db.collection(objType);
-			//let _id;
-			//try {
 			let	_id = new mongodb.ObjectID(objId);
-			//}
-			//catch (e) {
-			//	console.log('ERROR', e);
-			//	return Promise.reject(e);
-			//}
 
 			collection.find({_id: _id}).toArray((err, objs) => {
 						if (err) {
@@ -200,7 +193,7 @@ app.put('/data/:objType/:id',  function (req, res) {
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
 	dbConnect().then((db) => {
-		db.collection('user').findOne({username: req.body.username, pass: req.body.pass}, function (err, user) {
+		db.collection('users').findOne({email: req.body.email, pass: req.body.pass}, function (err, user) {
 			if (user) {
 				cl('Login Succesful');
                 delete user.pass;
@@ -232,7 +225,6 @@ app.get('/protected', requireLogin, function (req, res) {
 	res.end('User is loggedin, return some data');
 });
 
-
 // Kickup our server 
 // Note: app.listen will not work with cors and the socket
 // app.listen(3003, function () {
@@ -243,9 +235,7 @@ http.listen(3003, function () {
 	console.log(`DELETE: \t\t ${baseUrl}/{entity}/{id}`);
 	console.log(`PUT (update): \t\t ${baseUrl}/{entity}/{id}`);
 	console.log(`POST (add): \t\t ${baseUrl}/{entity}`);
-
 });
-
 
 io.on('connection', function (socket) {
 	console.log('a user connected');
