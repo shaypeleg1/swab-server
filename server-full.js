@@ -173,7 +173,7 @@ app.put('/data/:objType/',  function (req, res) {
 	const objType 	= req.params.objType;
 	const newObj 	= req.body;
     if (newObj._id && typeof newObj._id === 'string') newObj._id = new mongodb.ObjectID(newObj._id);
-    cl(`Requested to UPDATE the ${objType} with id: ${newObj._id}`);
+	cl(`Requested to UPDATE the ${objType} with id: ${newObj._id}`);
 	dbConnect().then((db) => {
 		const collection = db.collection(objType);
 		collection.updateOne({ _id: newObj._id}, newObj,
