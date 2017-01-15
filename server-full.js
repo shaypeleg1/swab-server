@@ -170,23 +170,23 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 // PUT - updates
 
 app.put('/data/:objType/',  function (req, res) {
-	const objType 	= req.params.objType;
-	const newObj 	= req.body;
-    if (newObj._id && typeof newObj._id === 'string') newObj._id = new mongodb.ObjectID(newObj._id);
+    const objType     = req.params.objType;
+    const newObj     = req.body;
+   if (newObj._id && typeof newObj._id === 'string') newObj._id = new mongodb.ObjectID(newObj._id);
     cl(`Requested to UPDATE the ${objType} with id: ${newObj._id}`);
-	dbConnect().then((db) => {
-		const collection = db.collection(objType);
-		collection.updateOne({ _id: newObj._id}, newObj,
-		 (err, result) => {
-			if (err) {
-				cl('Cannot Update', err)
-				res.json(500, { error: 'Update failed' })
-			} else {
-				res.json(newObj);
-			}
-			db.close();
-		});
-	});
+    dbConnect().then((db) => {
+        const collection = db.collection(objType);
+        collection.updateOne({ _id: newObj._id}, newObj,
+         (err, result) => {
+            if (err) {
+                cl('Cannot Update', err)
+                res.json(500, { error: 'Update failed' })
+            } else {
+                res.json(newObj);
+            }
+            db.close();
+        });
+    });
 });
 
 // Basic Login/Logout/Protected assets
