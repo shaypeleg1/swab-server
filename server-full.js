@@ -176,7 +176,7 @@ app.put('/data/:objType/',  function (req, res) {
 	cl(`Requested to UPDATE the ${objType} with id: ${newObj._id}`);
 	dbConnect().then((db) => {
 		const collection = db.collection(objType);
-		collection.updateOne({ _id: newObj._id}, newObj,
+		collection.updateOne({ _id:  newObj._id}, newObj,
 		 (err, result) => {
 			if (err) {
 				cl('Cannot Update', err)
