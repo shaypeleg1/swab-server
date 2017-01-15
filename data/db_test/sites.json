@@ -1,0 +1,39 @@
+  {
+    "_id": "587a5e2ec8bd6a0eec87634e",
+    "name": "My First Site",
+    "url": "http://www.swab.com/myfirstsite",
+    "descreption": "A descreption for your site",
+    "isPublished": false,
+    "components": [
+      {
+        "name": "component-template1",
+        "type": "mainArticlePreview",
+        "props": {
+          "title": "component-template - first template",
+          "subtitle": "Powered by Vue.js",
+          "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud                                                                 exercitation ullamco laboris nis",
+          "button": "LEARN MORE",
+          "imgSrc": ""
+        }
+      },
+      {
+        "name": "component-template2",
+        "type": "circlePreview",
+        "props": {
+          "title": "component-template - secound template",
+          "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud                                                                                      exercitation ullamco laboris nis",
+          "imgSrc": ""
+        }
+      },
+      {
+        "name": "component-template2",
+        "type": "shortArticlePreview",
+        "props": {
+          "title": "component-template - third template",
+          "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud                                                                 exercitation ullamco laboris nis",
+          "button": "MORE",
+          "imgSrc": ""
+        }
+      }
+    ]
+  }
