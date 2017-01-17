@@ -200,7 +200,7 @@ function getManySites(sitesToGet,res) {
 	cl('this is th query',query)
 	dbConnect().then((db) => {
 			const collection = db.collection('sites');
-			collection.find(query, {_id:1,name:1,url:1,}).toArray((err,objs)=>{
+			collection.find(query, {_id:1,siteInfo:1}).toArray((err,objs)=>{
 				if(err){
 					cl('cannot get you a list');
 				}
