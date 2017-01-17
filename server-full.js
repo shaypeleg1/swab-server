@@ -11,6 +11,7 @@ const express = require('express'),
 
 const clientSessions = require("client-sessions");
 const multer = require('multer')
+const ObjectId = mongodb.ObjectID;
 
 // Configure where uploaded files are going
 const uploadFolder = '/uploads';
@@ -24,13 +25,15 @@ var storage = multer.diskStorage({
 		cb(null, file.fieldname + '-' + Date.now() + ext)
 	}
 })
-var upload = multer({storage: storage})
+var upload = multer({
+	storage: storage
+})
 
 const app = express();
 
 var corsOptions = {
-  origin: /http:\/\/localhost:\d+/,
-  credentials: true
+	origin: /http:\/\/localhost:\d+/,
+	credentials: true
 };
 
 const serverRoot = 'http://localhost:3003/';
@@ -61,8 +64,7 @@ function dbConnect() {
 			if (err) {
 				cl('Cannot connect to DB', err)
 				reject(err);
-			}
-			else {
+			} else {
 				//cl("Connected to DB");
 				resolve(db);
 			}
@@ -79,7 +81,9 @@ app.get('/data/:objType', function (req, res) {
 		collection.find({}).toArray((err, objs) => {
 			if (err) {
 				cl('Cannot get you a list of ', err)
-				res.json(404, {error: 'not found'})
+				res.json(404, {
+					error: 'not found'
+				})
 			} else {
 				cl("Returning list of " + objs.length + " " + objType + "s");
 				res.json(objs);
@@ -97,20 +101,26 @@ app.get('/data/:objType/:id', function (req, res) {
 	dbConnect()
 		.then((db) => {
 			const collection = db.collection(objType);
-			let	_id = new mongodb.ObjectID(objId);
+			let _id = new mongodb.ObjectID(objId);
 
-			collection.find({_id: _id}).toArray((err, objs) => {
-						if (err) {
-							cl('Cannot get you that ', err)
-							res.json(404, {error: 'not found'})
-						} else {
-							cl("Returning a single " + objType);
-							res.json(objs[0]);
-						}
-						db.close();
-					});
+			collection.find({
+				_id: _id
+			}).toArray((err, objs) => {
+				if (err) {
+					cl('Cannot get you that ', err)
+					res.json(404, {
+						error: 'not found'
+					})
+				} else {
+					cl("Returning a single " + objType);
+					res.json(objs[0]);
+				}
+				db.close();
+			});
 		});
 });
+
+
 
 // DELETE
 app.delete('/data/:objType/:id', function (req, res) {
@@ -119,10 +129,14 @@ app.delete('/data/:objType/:id', function (req, res) {
 	cl(`Requested to DELETE the ${objType} with id: ${objId}`);
 	dbConnect().then((db) => {
 		const collection = db.collection(objType);
-		collection.deleteOne({_id: new mongodb.ObjectID(objId)}, (err, result) => {
+		collection.deleteOne({
+			_id: new mongodb.ObjectID(objId)
+		}, (err, result) => {
 			if (err) {
 				cl('Cannot Delete', err)
-				res.json(500, {error: 'Delete failed'})
+				res.json(500, {
+					error: 'Delete failed'
+				})
 			} else {
 				cl("Deleted", result);
 				res.json({});
@@ -137,71 +151,114 @@ app.delete('/data/:objType/:id', function (req, res) {
 
 // POST - adds 
 app.post('/data/:objType', upload.single('file'), function (req, res) {
-	//console.log('req.file', req.file);
-	// console.log('req.body', req.body);
-
 	const objType = req.params.objType;
 	cl("POST for " + objType);
-
 	const obj = req.body;
-	delete obj._id;
-	// If there is a file upload, add the url to the obj
-	if (req.file) {
-		obj.imgUrl = serverRoot + req.file.filename;
-	}
+	cl('there is an array!', req.body);
+	if (req.body.sitesToGet) {
+		// get many sites
+		getManySites(req.body.sitesToGet,res);
+			// res.json(objs);
 
-	dbConnect().then((db) => {
-		const collection = db.collection(objType);
+	}// upload a file 
+	else {
+		delete obj._id;
+		// If there is a file upload, add the url to the obj
+		if (req.file) {
+			obj.imgUrl = serverRoot + req.file.filename;
+		}
+		dbConnect().then((db) => {
+			const collection = db.collection(objType);
 
-		collection.insert(obj, (err, result) => {
-			if (err) {
-				cl(`Couldnt insert a new ${objType}`, err)
-				res.json(500, {error: 'Failed to add'})
-			} else {
-				cl(objType + " added");
-				res.json(obj);
-				db.close();
-			}
+			collection.insert(obj, (err, result) => {
+				if (err) {
+					cl(`Couldnt insert a new ${objType}`, err)
+					res.json(500, {
+						error: 'Failed to add'
+					})
+				} else {
+					cl(objType + " added");
+					res.json(obj);
+					db.close();
+				}
+			});
 		});
-	});
-
+	}
 });
-
+function queryBuilder(idsOfSites){
+	let queryObj = {$or:[]}
+	idsOfSites.forEach(siteId => {
+		queryObj['$or'].push({_id:ObjectId(siteId)})
+	})
+	cl('this is the query',queryObj);
+	return queryObj;
+}
+// get sites
+function getManySites(sitesToGet,res) {
+	cl('in getManySites', sitesToGet);
+	const query = queryBuilder(sitesToGet);
+	cl('this is th query',query)
+	dbConnect().then((db) => {
+			const collection = db.collection('sites');
+			collection.find(query, {_id:1,name:1,url:1,}).toArray((err,objs)=>{
+				if(err){
+					cl('cannot get you a list');
+				}
+				else{
+					cl('this are the sites',objs);
+					res.json(objs);
+				}
+				db.close();
+			});
+		});
+}
 // PUT - updates
 
-app.put('/data/:objType/',  function (req, res) {
-	const objType 	= req.params.objType;
-	const newObj 	= req.body;
-    if (newObj._id && typeof newObj._id === 'string') newObj._id = new mongodb.ObjectID(newObj._id);
+app.put('/data/:objType/', function (req, res) {
+	const objType = req.params.objType;
+	const newObj = req.body;
+	if (newObj._id && typeof newObj._id === 'string') newObj._id = new mongodb.ObjectID(newObj._id);
 	cl(`Requested to UPDATE the ${objType} with id: ${newObj._id}`);
 	dbConnect().then((db) => {
 		const collection = db.collection(objType);
-		collection.updateOne({ _id:  newObj._id}, newObj,
-		 (err, result) => {
-			if (err) {
-				cl('Cannot Update', err)
-				res.json(500, { error: 'Update failed' })
-			} else {
-				res.json(newObj);
-			}
-			db.close();
-		});
+		collection.updateOne({
+				_id: newObj._id
+			}, newObj,
+			(err, result) => {
+				if (err) {
+					cl('Cannot Update', err)
+					res.json(500, {
+						error: 'Update failed'
+					})
+				} else {
+					res.json(newObj);
+				}
+				db.close();
+			});
 	});
 });
 
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
 	dbConnect().then((db) => {
-		db.collection('users').findOne({email: req.body.email, pass: req.body.pass}, function (err, user) {
+		db.collection('users').findOne({
+			email: req.body.email,
+			pass: req.body.pass
+		}, function (err, user) {
 			if (user) {
 				cl('Login Succesful');
-                delete user.pass;
-				req.session.user = user;  //refresh the session value
-				res.json({token: 'Beareloginr: puk115th@b@5t', user});
+				delete user.pass;
+				req.session.user = user; //refresh the session value
+				res.json({
+					token: 'Beareloginr: puk115th@b@5t',
+					user
+				});
 			} else {
 				cl('Login NOT Succesful');
 				req.session.user = null;
-				res.json(403, { error: 'Login failed' })
+				res.json(403, {
+					error: 'Login failed'
+				})
 			}
 		});
 	});
@@ -215,7 +272,9 @@ app.get('/logout', function (req, res) {
 function requireLogin(req, res, next) {
 	if (!req.session.user) {
 		cl('Login Required');
-		res.json(403, {error: 'Please Login'})
+		res.json(403, {
+			error: 'Please Login'
+		})
 	} else {
 		next();
 	}
@@ -255,6 +314,6 @@ function cl(...params) {
 }
 
 // Just for basic testing the socket
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/test-socket.html');
+app.get('/', function (req, res) {
+	res.sendFile(__dirname + '/test-socket.html');
 });
