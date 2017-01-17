@@ -157,10 +157,17 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 	cl('there is an array!', req.body);
 	if (req.body.sitesToGet) {
 		// get many sites
-		getManySites(req.body.sitesToGet,res);
-			// res.json(objs);
+		getManySites(req.body.sitesToGet, res);
+		// res.json(objs);
 
-	}// upload a file 
+	} 
+	/* this will request a defualt site, not sure if i need it */
+	// else if (req.body.makeNewSite) { 
+	// 	// function accepts an object with id of user and components of a site
+	// 	makeNewSite(req.body.makeNewSiteID) {
+
+	// 	}
+	// } 
 	else {
 		delete obj._id;
 		// If there is a file upload, add the url to the obj
@@ -185,32 +192,45 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 		});
 	}
 });
-function queryBuilder(idsOfSites){
-	let queryObj = {$or:[]}
+
+function queryBuilder(idsOfSites) {
+	let queryObj = {
+		$or: []
+	}
 	idsOfSites.forEach(siteId => {
-		queryObj['$or'].push({_id:ObjectId(siteId)})
+		queryObj['$or'].push({
+			_id: ObjectId(siteId)
+		})
 	})
-	cl('this is the query',queryObj);
+	cl('this is the query', queryObj);
 	return queryObj;
 }
 // get sites
-function getManySites(sitesToGet,res) {
+function getManySites(sitesToGet, res) {
 	cl('in getManySites', sitesToGet);
 	const query = queryBuilder(sitesToGet);
-	cl('this is th query',query)
+	cl('this is th query', query)
 	dbConnect().then((db) => {
-			const collection = db.collection('sites');
-			collection.find(query, {_id:1,siteInfo:1}).toArray((err,objs)=>{
-				if(err){
-					cl('cannot get you a list');
-				}
-				else{
-					cl('this are the sites',objs);
-					res.json(objs);
-				}
-				db.close();
-			});
+		const collection = db.collection('sites');
+		collection.find(query, {
+			_id: 1,
+			siteInfo: 1
+		}).toArray((err, objs) => {
+			if (err) {
+				cl('cannot get you a list');
+			} else {
+				cl('this are the sites', objs);
+				res.json(objs);
+			}
+			db.close();
 		});
+	});
+}
+
+
+// function accepts an object with id of user and components of a site
+function makeNewSite(newSiteObjID){
+// this is just an id to a defualt site
 }
 // PUT - updates
 
