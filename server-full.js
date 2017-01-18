@@ -159,7 +159,7 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 		// get many sites
 		getManySites(req.body.sitesToGet, res);
 		// res.json(objs);
-
+		
 	} 
 	/* this will request a defualt site, not sure if i need it */
 	// else if (req.body.makeNewSite) { 
@@ -252,6 +252,7 @@ app.put('/data/:objType/', function (req, res) {
 					})
 				} else {
 					res.json(newObj);
+					
 				}
 				db.close();
 			});
