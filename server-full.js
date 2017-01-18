@@ -154,21 +154,16 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 	const objType = req.params.objType;
 	cl("POST for " + objType);
 	const obj = req.body;
-	cl('there is an array!', req.body);
+	cl('data in the post request:', req.body.newSiteData);
 	if (req.body.sitesToGet) {
 		// get many sites
 		getManySites(req.body.sitesToGet, res);
 		// res.json(objs);
-		
-	} 
-	/* this will request a defualt site, not sure if i need it */
-	// else if (req.body.makeNewSite) { 
-	// 	// function accepts an object with id of user and components of a site
-	// 	makeNewSite(req.body.makeNewSiteID) {
-
-	// 	}
-	// } 
-	else {
+	} else if (req.body.newSiteData) { // there is newSiteData => make new site
+		cl(' making new site')
+			//call function to make newsite
+		makeNewSite(obj.newSiteData, objType,res);
+	} else {
 		delete obj._id;
 		// If there is a file upload, add the url to the obj
 		if (req.file) {
@@ -193,6 +188,57 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 	}
 });
 
+
+function makeNewSite(newSiteData, objType,res) {
+	cl('newSiteData inside makeNewSiteData:', newSiteData)
+		// first get sitedata from the server based on the siteId,
+	let templateSite = null
+	let templateSiteID = ObjectId(newSiteData.siteId);
+	dbConnect().then((db) => {
+			const sitesCollection = db.collection('sites');
+			const usersCollection = db.collection('users');
+			sitesCollection.find({
+				_id: templateSiteID
+			}).toArray((err, objs) => {
+				if (err) {
+					cl('Cannot get you that ', err)
+					res.json(404, {
+						error: 'not found'
+					})
+				} else {
+					templateSite = objs[0];
+					delete templateSite._id;
+					cl('templateSite:', templateSite);
+					sitesCollection.insert(templateSite, (err, result) => {
+						if (err) {
+							cl('there is an error')
+						} else {
+							// templateSite._id = 
+							cl('here is the result', result.ops[0]._id);
+							templateSite._id = result.ops[0]._id;
+							usersCollection.update({_id: ObjectId(newSiteData.userId)},{$push:{sites:templateSite._id}},(er,result) =>
+							{
+								if(err){
+										cl('cant find user')
+									}
+									else{
+										cl('result after push', result)
+										res.json(templateSite);
+										db.close();
+									}
+							})
+						}
+					})
+				}
+
+			})
+			
+		})
+}
+
+// function insertToCollection(collection,dataToInsert){
+// 	collection.insert()
+// }
 function queryBuilder(idsOfSites) {
 	let queryObj = {
 		$or: []
@@ -227,12 +273,6 @@ function getManySites(sitesToGet, res) {
 	});
 }
 
-
-// function accepts an object with id of user and components of a site
-function makeNewSite(newSiteObjID){
-// this is just an id to a defualt site
-}
-// PUT - updates
 
 app.put('/data/:objType/', function (req, res) {
 	const objType = req.params.objType;
