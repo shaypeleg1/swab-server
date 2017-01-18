@@ -9,6 +9,8 @@ if (nodeMajor < 4) {
 		require('babel-register')();
 	}
 }
+
+
 require('./server-full');
 // var prompt = require('prompt');
 // console.info('Welcome to Misterbit Simple REST Server!');
