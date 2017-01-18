@@ -208,7 +208,7 @@ function makeNewSite(newSiteData, objType,res) {
 				} else {
 					templateSite = objs[0];
 					delete templateSite._id;
-					cl('templateSite:', templateSite);
+					// cl('templateSite:', templateSite);
 					sitesCollection.insert(templateSite, (err, result) => {
 						if (err) {
 							cl('there is an error')
@@ -222,7 +222,7 @@ function makeNewSite(newSiteData, objType,res) {
 										cl('cant find user')
 									}
 									else{
-										cl('result after push', result)
+										// cl('result after push', result)
 										res.json(templateSite);
 										db.close();
 									}
