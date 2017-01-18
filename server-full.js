@@ -159,10 +159,6 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 		// get many sites
 		getManySites(req.body.sitesToGet, res);
 		// res.json(objs);
-
-
-
-
 	} else if (req.body.newSiteData) { // there is newSiteData => make new site
 		cl(' making new site')
 			//call function to make newsite
@@ -296,6 +292,7 @@ app.put('/data/:objType/', function (req, res) {
 					})
 				} else {
 					res.json(newObj);
+					
 				}
 				db.close();
 			});
