@@ -301,6 +301,12 @@ app.put('/data/:objType/', function (req, res) {
 
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
+	login(req,res)
+	
+});
+
+function login(req,res){
+	cl('inside the login');
 	dbConnect().then((db) => {
 		db.collection('users').findOne({
 			email: req.body.email,
@@ -323,7 +329,32 @@ app.post('/login', function (req, res) {
 			}
 		});
 	});
+
+}
+app.post('/signup', function(req,res){
+	cl('inside server signup', req.body);
+	const newUserObj = req.body;
+	
+	dbConnect().then((db) => {
+			const collection = db.collection('users');
+			cl('user', newUserObj)
+			collection.insert(newUserObj, (err, result) => {
+				if (err) {
+					cl(`Couldnt insert a new user`)
+					res.json(500, {
+						error: 'Failed to add'
+					})
+				} else {
+					cl(newUserObj + " added");
+					// res.json(newUserObj);
+					login(req,res);
+					// db.close();
+				}
+			});
+		});
+		
 });
+
 
 app.get('/logout', function (req, res) {
 	req.session.reset();
@@ -378,3 +409,4 @@ function cl(...params) {
 app.get('/', function (req, res) {
 	res.sendFile(__dirname + '/test-socket.html');
 });
+
