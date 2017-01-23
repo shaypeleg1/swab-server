@@ -249,9 +249,7 @@ function makeNewSite(newSiteData, objType, res) {
 					}
 				})
 			}
-
 		})
-
 	})
 }
 
@@ -308,12 +306,12 @@ function login(req, res) {
 			}
 		});
 	});
-
 }
 
 app.post('/signup', function (req, res) {
 
 	const newUserObj = req.body;
+	newUserObj.sites = ["587e0e2e9f8d447e4e1cbb54"] // adding first site template
 
 	dbConnect().then((db) => {
 		const collection = db.collection('users');
@@ -322,6 +320,7 @@ app.post('/signup', function (req, res) {
 		collection.findOne({
 			email: req.body.email,
 			pass: req.body.pass
+
 		}, function (err, user) {
 			if (user) {
 				cl('Login Succesful');
