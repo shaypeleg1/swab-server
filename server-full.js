@@ -162,7 +162,7 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 	} else if (req.body.newSiteData) { // there is newSiteData => make new site
 		cl(' making new site')
 			//call function to make newsite
-		makeNewSite(obj.newSiteData, objType,res);
+		makeNewSite(obj.newSiteData, objType, res);
 	} else {
 		delete obj._id;
 		// If there is a file upload, add the url to the obj
@@ -189,51 +189,55 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 });
 
 
-function makeNewSite(newSiteData, objType,res) {
+function makeNewSite(newSiteData, objType, res) {
 	cl('newSiteData inside makeNewSiteData:', newSiteData)
 		// first get sitedata from the server based on the siteId,
 	let templateSite = null
 	let templateSiteID = ObjectId(newSiteData.siteId);
 	dbConnect().then((db) => {
-			const sitesCollection = db.collection('sites');
-			const usersCollection = db.collection('users');
-			sitesCollection.find({
-				_id: templateSiteID
-			}).toArray((err, objs) => {
-				if (err) {
-					cl('Cannot get you that ', err)
-					res.json(404, {
-						error: 'not found'
-					})
-				} else {
-					templateSite = objs[0];
-					delete templateSite._id;
-					// cl('templateSite:', templateSite);
-					sitesCollection.insert(templateSite, (err, result) => {
-						if (err) {
-							cl('there is an error')
-						} else {
-							// templateSite._id = 
-							cl('here is the result', result.ops[0]._id);
-							templateSite._id = result.ops[0]._id;
-							usersCollection.update({_id: ObjectId(newSiteData.userId)},{$push:{sites:templateSite._id}},(er,result) =>
-							{
-								if(err){
-										cl('cant find user')
-									}
-									else{
-										// cl('result after push', result)
-										res.json(templateSite);
-										db.close();
-									}
-							})
-						}
-					})
-				}
+		const sitesCollection = db.collection('sites');
+		const usersCollection = db.collection('users');
+		sitesCollection.find({
+			_id: templateSiteID
+		}).toArray((err, objs) => {
+			if (err) {
+				cl('Cannot get you that ', err)
+				res.json(404, {
+					error: 'not found'
+				})
+			} else {
+				templateSite = objs[0];
+				delete templateSite._id;
+				// cl('templateSite:', templateSite);
+				sitesCollection.insert(templateSite, (err, result) => {
+					if (err) {
+						cl('there is an error')
+					} else {
+						// templateSite._id = 
+						cl('here is the result', result.ops[0]._id);
+						templateSite._id = result.ops[0]._id;
+						usersCollection.update({
+							_id: ObjectId(newSiteData.userId)
+						}, {
+							$push: {
+								sites: templateSite._id
+							}
+						}, (er, result) => {
+							if (err) {
+								cl('cant find user')
+							} else {
+								// cl('result after push', result)
+								res.json(templateSite);
+								db.close();
+							}
+						})
+					}
+				})
+			}
 
-			})
-			
 		})
+
+	})
 }
 
 // function insertToCollection(collection,dataToInsert){
@@ -292,7 +296,7 @@ app.put('/data/:objType/', function (req, res) {
 					})
 				} else {
 					res.json(newObj);
-					
+
 				}
 				db.close();
 			});
@@ -301,11 +305,11 @@ app.put('/data/:objType/', function (req, res) {
 
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
-	login(req,res)
-	
+	login(req, res)
+
 });
 
-function login(req,res){
+function login(req, res) {
 	cl('inside the login');
 	dbConnect().then((db) => {
 		db.collection('users').findOne({
@@ -331,28 +335,40 @@ function login(req,res){
 	});
 
 }
-app.post('/signup', function(req,res){
+app.post('/signup', function (req, res) {
 	cl('inside server signup', req.body);
 	const newUserObj = req.body;
-	
+
 	dbConnect().then((db) => {
-			const collection = db.collection('users');
-			cl('user', newUserObj)
-			collection.insert(newUserObj, (err, result) => {
-				if (err) {
-					cl(`Couldnt insert a new user`)
-					res.json(500, {
-						error: 'Failed to add'
-					})
-				} else {
-					cl(newUserObj + " added");
-					// res.json(newUserObj);
-					login(req,res);
-					// db.close();
-				}
-			});
+		const collection = db.collection('users');
+		cl('user', newUserObj)
+		collection.findOne({
+			email: req.body.email,
+			pass: req.body.pass
+		}, function (err, user) {
+			if (user) {
+				cl('Login Succesful');
+				res.json(403, {
+					error: 'user allready exists'
+				});
+			} else {
+				collection.insert(newUserObj, (err, result) => {
+					if (err) {
+						cl(`Couldnt insert a new user`)
+						res.json(500, {
+							error: 'Failed to add'
+						})
+					} else {
+						cl(newUserObj + " added");
+						// res.json(newUserObj);
+						login(req, res);
+						// db.close();
+					}
+				});
+			}
 		});
-		
+	});
+
 });
 
 
@@ -409,4 +425,3 @@ function cl(...params) {
 app.get('/', function (req, res) {
 	res.sendFile(__dirname + '/test-socket.html');
 });
-
