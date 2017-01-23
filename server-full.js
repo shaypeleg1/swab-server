@@ -310,20 +310,37 @@ function login(req, res) {
 	});
 
 }
+
 app.post('/signup', function (req, res) {
+
 	const newUserObj = req.body;
 
 	dbConnect().then((db) => {
 		const collection = db.collection('users');
-		collection.insert(newUserObj, (err, result) => {
-			if (err) {
-				cl(`Couldnt insert a new user`)
-				res.json(500, {
-					error: 'Failed to add'
-				})
+
+		cl('user', newUserObj)
+		collection.findOne({
+			email: req.body.email,
+			pass: req.body.pass
+		}, function (err, user) {
+			if (user) {
+				cl('Login Succesful');
+				res.json(403, {
+					error: 'user allready exists'
+				});
 			} else {
-				cl(newUserObj + " added");
-				login(req, res);
+				collection.insert(newUserObj, (err, result) => {
+					if (err) {
+						cl(`Couldnt insert a new user`)
+						res.json(500, {
+							error: 'Failed to add'
+						})
+					} else {
+						cl(newUserObj + " added");
+						login(req, res);
+					}
+				});
+
 			}
 		});
 	});
