@@ -1,9 +1,9 @@
 // Minimal Simple REST API Handler (With MongoDB and Socket.io)
 // Plus support for simple login and session
 // Plus support for file upload
-// Author: Yaron Biton misterBIT.co.il
-
 "use strict";
+var utils = require("./utils.js");
+
 const express = require('express'),
 	bodyParser = require('body-parser'),
 	cors = require('cors'),
@@ -12,6 +12,12 @@ const express = require('express'),
 const clientSessions = require("client-sessions");
 const multer = require('multer')
 const ObjectId = mongodb.ObjectID;
+
+// Main server url's
+const serverRoot = 'http://localhost:3003/';
+const baseUrl = serverRoot + 'data';
+const DB_URL = 'mongodb://localhost:27017/swab';
+
 
 // Configure where uploaded files are going
 const uploadFolder = '/uploads';
@@ -25,6 +31,8 @@ var storage = multer.diskStorage({
 		cb(null, file.fieldname + '-' + Date.now() + ext)
 	}
 })
+
+
 var upload = multer({
 	storage: storage
 })
@@ -35,10 +43,6 @@ var corsOptions = {
 	origin: /http:\/\/localhost:\d+/,
 	credentials: true
 };
-
-const serverRoot = 'http://localhost:3003/';
-const baseUrl = serverRoot + 'data';
-
 
 app.use(express.static('uploads'));
 app.use(cors(corsOptions));
@@ -53,51 +57,52 @@ app.use(clientSessions({
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
-
+// connection to DB
 function dbConnect() {
-
 	return new Promise((resolve, reject) => {
 		// Connection URL
-		var url = 'mongodb://localhost:27017/swab';
+		var DB_URL = 'mongodb://localhost:27017/swab';
 		// Use connect method to connect to the Server
-		mongodb.MongoClient.connect(url, function (err, db) {
+		mongodb.MongoClient.connect(DB_URL, function (err, db) {
 			if (err) {
 				cl('Cannot connect to DB', err)
 				reject(err);
 			} else {
-				//cl("Connected to DB");
 				resolve(db);
 			}
 		});
 	});
 }
 
-// GETs a list
+// GETs a list of sites (other db will be rejected)
 app.get('/data/:objType', function (req, res) {
 	const objType = req.params.objType;
-	dbConnect().then((db) => {
-		const collection = db.collection(objType);
+	if (objType !== 'sites'){res.json(403, {error: 'unauthorized'})
+		return;
+	}
+	else {
+		dbConnect().then((db) => {
+			const collection = db.collection(objType);
 
-		collection.find({}).toArray((err, objs) => {
-			if (err) {
-				cl('Cannot get you a list of ', err)
-				res.json(404, {
-					error: 'not found'
-				})
-			} else {
-				cl("Returning list of " + objs.length + " " + objType + "s");
-				res.json(objs);
-			}
-			db.close();
+			collection.find({}).toArray((err, objs) => {
+				if (err) {
+					cl('Cannot get a list of ', err)
+					res.json(404, {
+						error: 'not found'
+					})
+				} else {
+					res.json(objs);
+				}
+				db.close();
+			});
 		});
-	});
+	}
 });
 
 // GETs a single
 app.get('/data/:objType/:id', function (req, res) {
 	const objType = req.params.objType;
 	const objId = req.params.id;
-	cl(`Getting you an ${objType} with id: ${objId}`);
 	dbConnect()
 		.then((db) => {
 			const collection = db.collection(objType);
@@ -107,12 +112,11 @@ app.get('/data/:objType/:id', function (req, res) {
 				_id: _id
 			}).toArray((err, objs) => {
 				if (err) {
-					cl('Cannot get you that ', err)
+					cl('Cannot get that ', err)
 					res.json(404, {
 						error: 'not found'
 					})
 				} else {
-					cl("Returning a single " + objType);
 					res.json(objs[0]);
 				}
 				db.close();
@@ -126,7 +130,6 @@ app.get('/data/:objType/:id', function (req, res) {
 app.delete('/data/:objType/:id', function (req, res) {
 	const objType = req.params.objType;
 	const objId = req.params.id;
-	cl(`Requested to DELETE the ${objType} with id: ${objId}`);
 	dbConnect().then((db) => {
 		const collection = db.collection(objType);
 		collection.deleteOne({
@@ -138,7 +141,6 @@ app.delete('/data/:objType/:id', function (req, res) {
 					error: 'Delete failed'
 				})
 			} else {
-				cl("Deleted", result);
 				res.json({});
 			}
 			db.close();
@@ -146,23 +148,17 @@ app.delete('/data/:objType/:id', function (req, res) {
 
 	});
 
-
 });
 
 // POST - adds 
 app.post('/data/:objType', upload.single('file'), function (req, res) {
 	const objType = req.params.objType;
-	cl("POST for " + objType);
 	const obj = req.body;
-	cl('data in the post request:', req.body.newSiteData);
 	if (req.body.sitesToGet) {
-		// get many sites
 		getManySites(req.body.sitesToGet, res);
-		// res.json(objs);
 	} else if (req.body.newSiteData) { // there is newSiteData => make new site
-		cl(' making new site')
-			//call function to make newsite
-		makeNewSite(obj.newSiteData, objType,res);
+		//call function to make newsite
+		makeNewSite(obj.newSiteData, objType, res);
 	} else {
 		delete obj._id;
 		// If there is a file upload, add the url to the obj
@@ -171,7 +167,6 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 		}
 		dbConnect().then((db) => {
 			const collection = db.collection(objType);
-
 			collection.insert(obj, (err, result) => {
 				if (err) {
 					cl(`Couldnt insert a new ${objType}`, err)
@@ -179,7 +174,6 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 						error: 'Failed to add'
 					})
 				} else {
-					cl(objType + " added");
 					res.json(obj);
 					db.close();
 				}
@@ -188,58 +182,26 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 	}
 });
 
-
-function makeNewSite(newSiteData, objType,res) {
-	cl('newSiteData inside makeNewSiteData:', newSiteData)
-		// first get sitedata from the server based on the siteId,
-	let templateSite = null
-	let templateSiteID = ObjectId(newSiteData.siteId);
+// Get sites preview
+function getManySites(sitesToGet, res) {
+	const query = getIdArray(sitesToGet);
 	dbConnect().then((db) => {
-			const sitesCollection = db.collection('sites');
-			const usersCollection = db.collection('users');
-			sitesCollection.find({
-				_id: templateSiteID
-			}).toArray((err, objs) => {
-				if (err) {
-					cl('Cannot get you that ', err)
-					res.json(404, {
-						error: 'not found'
-					})
-				} else {
-					templateSite = objs[0];
-					delete templateSite._id;
-					// cl('templateSite:', templateSite);
-					sitesCollection.insert(templateSite, (err, result) => {
-						if (err) {
-							cl('there is an error')
-						} else {
-							// templateSite._id = 
-							cl('here is the result', result.ops[0]._id);
-							templateSite._id = result.ops[0]._id;
-							usersCollection.update({_id: ObjectId(newSiteData.userId)},{$push:{sites:templateSite._id}},(er,result) =>
-							{
-								if(err){
-										cl('cant find user')
-									}
-									else{
-										// cl('result after push', result)
-										res.json(templateSite);
-										db.close();
-									}
-							})
-						}
-					})
-				}
-
-			})
-			
-		})
+		const collection = db.collection('sites');
+		collection.find(query, {
+			_id: 1,
+			siteInfo: 1
+		}).toArray((err, objs) => {
+			if (err) {
+				cl('cannot get a list');
+			} else {
+				res.json(objs);
+			}
+			db.close();
+		});
+	});
 }
-
-// function insertToCollection(collection,dataToInsert){
-// 	collection.insert()
-// }
-function queryBuilder(idsOfSites) {
+// Build an array from sites id's
+function getIdArray(idsOfSites) {
 	let queryObj = {
 		$or: []
 	}
@@ -248,29 +210,49 @@ function queryBuilder(idsOfSites) {
 			_id: ObjectId(siteId)
 		})
 	})
-	cl('this is the query', queryObj);
 	return queryObj;
 }
-// get sites
-function getManySites(sitesToGet, res) {
-	cl('in getManySites', sitesToGet);
-	const query = queryBuilder(sitesToGet);
-	cl('this is th query', query)
+
+function makeNewSite(newSiteData, objType, res) {
+	// Get site template data based on the siteId,
+	let templateSite = null
+	let templateSiteID = ObjectId(newSiteData.siteId);
 	dbConnect().then((db) => {
-		const collection = db.collection('sites');
-		collection.find(query, {
-			_id: 1,
-			siteInfo: 1
+		const sitesCollection = db.collection('sites');
+		const usersCollection = db.collection('users');
+		sitesCollection.find({
+			_id: templateSiteID
 		}).toArray((err, objs) => {
 			if (err) {
-				cl('cannot get you a list');
+				cl('Cannot get that ', err)
+				res.json(404, {
+					error: 'not found'
+				})
 			} else {
-				cl('this are the sites', objs);
-				res.json(objs);
+				// add new site to user collection
+				templateSite = objs[0];
+				delete templateSite._id;
+				sitesCollection.insert(templateSite, (err, result) => {
+					if (err) {
+						cl('there is an error')
+					} else {
+						templateSite._id = result.ops[0]._id;
+						usersCollection.update({ _id: ObjectId(newSiteData.userId) }, { $push: { sites: templateSite._id } }, (er, result) => {
+							if (err) {
+								cl('cant find user')
+							}
+							else {
+								res.json(templateSite);
+								db.close();
+							}
+						})
+					}
+				})
 			}
-			db.close();
-		});
-	});
+
+		})
+
+	})
 }
 
 
@@ -282,8 +264,8 @@ app.put('/data/:objType/', function (req, res) {
 	dbConnect().then((db) => {
 		const collection = db.collection(objType);
 		collection.updateOne({
-				_id: newObj._id
-			}, newObj,
+			_id: newObj._id
+		}, newObj,
 			(err, result) => {
 				if (err) {
 					cl('Cannot Update', err)
@@ -292,7 +274,7 @@ app.put('/data/:objType/', function (req, res) {
 					})
 				} else {
 					res.json(newObj);
-					
+
 				}
 				db.close();
 			});
@@ -301,19 +283,16 @@ app.put('/data/:objType/', function (req, res) {
 
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
-	login(req,res)
-	
+	login(req, res)
 });
 
-function login(req,res){
-	cl('inside the login');
+function login(req, res) {
 	dbConnect().then((db) => {
 		db.collection('users').findOne({
 			email: req.body.email,
 			pass: req.body.pass
 		}, function (err, user) {
 			if (user) {
-				cl('Login Succesful');
 				delete user.pass;
 				req.session.user = user; //refresh the session value
 				res.json({
@@ -331,28 +310,24 @@ function login(req,res){
 	});
 
 }
-app.post('/signup', function(req,res){
-	cl('inside server signup', req.body);
+app.post('/signup', function (req, res) {
 	const newUserObj = req.body;
-	
+
 	dbConnect().then((db) => {
-			const collection = db.collection('users');
-			cl('user', newUserObj)
-			collection.insert(newUserObj, (err, result) => {
-				if (err) {
-					cl(`Couldnt insert a new user`)
-					res.json(500, {
-						error: 'Failed to add'
-					})
-				} else {
-					cl(newUserObj + " added");
-					// res.json(newUserObj);
-					login(req,res);
-					// db.close();
-				}
-			});
+		const collection = db.collection('users');
+		collection.insert(newUserObj, (err, result) => {
+			if (err) {
+				cl(`Couldnt insert a new user`)
+				res.json(500, {
+					error: 'Failed to add'
+				})
+			} else {
+				cl(newUserObj + " added");
+				login(req, res);
+			}
 		});
-		
+	});
+
 });
 
 
@@ -387,26 +362,6 @@ http.listen(3003, function () {
 	console.log(`POST (add): \t\t ${baseUrl}/{entity}`);
 });
 
-io.on('connection', function (socket) {
-	console.log('a user connected');
-	socket.on('disconnect', function () {
-		console.log('user disconnected');
-	});
-	socket.on('chat message', function (msg) {
-		// console.log('message: ' + msg);
-		io.emit('chat message', msg);
-	});
-});
-
-cl('WebSocket is Ready');
-
-// Some small time utility functions
 function cl(...params) {
 	console.log.apply(console, params);
 }
-
-// Just for basic testing the socket
-app.get('/', function (req, res) {
-	res.sendFile(__dirname + '/test-socket.html');
-});
-
