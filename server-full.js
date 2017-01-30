@@ -14,9 +14,11 @@ const multer = require('multer')
 const ObjectId = mongodb.ObjectID;
 
 // Main server url's
-const serverRoot = 'http://localhost:3003/';
+ const serverRoot = 'http://localhost:3003/';
+// const serverRoot = '/';
 const baseUrl = serverRoot + 'data';
-const DB_URL = 'mongodb://localhost:27017/swab';
+// const DB_URL = 'mongodb://localhost:27017/swab';
+var DB_URL = 'mongodb://swabuser:misterbit@ds117209.mlab.com:17209/swab';
 
 
 // Configure where uploaded files are going
@@ -61,7 +63,7 @@ const io = require('socket.io')(http);
 function dbConnect() {
 	return new Promise((resolve, reject) => {
 		// Connection URL
-		var DB_URL = 'mongodb://localhost:27017/swab';
+		var DB_URL = 'mongodb://swabuser:misterbit@ds117209.mlab.com:17209/swab';
 		// Use connect method to connect to the Server
 		mongodb.MongoClient.connect(DB_URL, function (err, db) {
 			if (err) {
