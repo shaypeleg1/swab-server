@@ -24,6 +24,7 @@ if (isProduction) {
 }
 else {
 	serverRoot = 'http://localhost:3003/';
+	// serverRoot = 'http://coding-academy.net/swab/';
 	DB_URL = 'mongodb://localhost:27017/swab';
 }
 
